@@ -16,22 +16,34 @@
 */
 
 $gitignore = <<<EOF
-wp-admin/
-wp-includes/
+*.log
+*.swp
+*.back
+*.bak
+*.sql
+*.sql.gz
+~*
+
 .htaccess
+.maintenance
+
+wp-config.php
+sitemap.xml
+sitemap.xml.gz
 wp-content/uploads/
 wp-content/blogs.dir/
 wp-content/upgrade/
 wp-content/backup-db/
-wp-content/advanced-cache.php
-wp-content/wp-cache-config.php
-sitemap.xml
-*.log
 wp-content/cache/
 wp-content/backups/
-sitemap.xml.gz
-wp-config.php
 
+wp-content/advanced-cache.php
+wp-content/object-cache.php
+wp-content/wp-cache-config.php
+wp-content/db.php
+
+wp-admin/
+wp-includes/
 /index.php
 /license.txt
 /readme.html
@@ -48,7 +60,6 @@ wp-config.php
 /wp-signup.php
 /wp-trackback.php
 /xmlrpc.php
-.maintenance
 EOF;
 
 function _log() {
@@ -62,8 +73,21 @@ function _log() {
 		foreach ( $args as $arg )
 			var_dump( $arg );
 		$out = ob_get_clean();
-		error_log( $out );
+		//error_log( $out );
 	}
+}
+
+function _gitium_make_ssh_git_file_exe() {
+	$ssh_wrapper = dirname( __FILE__ ) . '/ssh-git';
+	$process     = proc_open(
+		"chmod -f +x $ssh_wrapper",
+		array(
+			0 => array( 'pipe', 'r' ),  // stdin
+			1 => array( 'pipe', 'w' ),  // stdout
+		),
+		$pipes
+	);
+	fclose( $pipes[0] );
 }
 
 function _git_rrmdir( $dir ) {
@@ -207,8 +231,8 @@ class Git_Wrapper {
 		global $gitignore;
 		file_put_contents( "$this->repo_dir/.gitignore", $gitignore );
 		list( $return, $response ) = $this->_call( 'init' );
-		$this->_call( 'config', 'user.email', 'git-sauce@presslabs.com' );
-		$this->_call( 'config', 'user.name', 'Git Sauce' );
+		$this->_call( 'config', 'user.email', 'gitium@presslabs.com' );
+		$this->_call( 'config', 'user.name', 'Gitium' );
 		$this->_call( 'config', 'push.default', 'matching' );
 		return ( 0 == $return );
 	}

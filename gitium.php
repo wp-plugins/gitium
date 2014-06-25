@@ -1,7 +1,7 @@
 <?php
 /*
  * Plugin Name: Gitium
- * Version: 0.3-alpha
+ * Version: 0.3.1-alpha
  * Author: PressLabs
  * Author URI: http://www.presslabs.com
  * License: GPL2
@@ -26,6 +26,8 @@
 require_once __DIR__ . '/git-wrapper.php';
 require_once __DIR__ . '/gitium-admin.php';
 
+register_activation_hook( __FILE__, '_gitium_make_ssh_git_file_exe' );
+
 /* Array
 (
     [themes] => Array
@@ -38,7 +40,7 @@ require_once __DIR__ . '/gitium-admin.php';
             [hello-dolly/hello.php] => `Hello Dolly` version 1.6
         )
 
-	) */
+) */
 function gitium_update_versions() {
 	//
 	// get all themes from WP
@@ -482,4 +484,3 @@ function gitium_remote_disconnected_notice() {
 	<?php endif;
 }
 add_action( 'admin_notices', 'gitium_remote_disconnected_notice' );
-
