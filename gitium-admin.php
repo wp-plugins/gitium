@@ -50,7 +50,7 @@ class Gitium_Admin {
 		);
 	}
 
-	private function humaized_change( $change ) {
+	public function humanized_change( $change ) {
 		$meaning = array(
 			'??' => 'untracked',
 			'rM' => 'modified to remote',
@@ -237,8 +237,9 @@ class Gitium_Admin {
 		<tr>
 			<th scope="row"><label for="remote_url">Remote URL</label></th>
 			<td>
-				<input type="text" class="regular-text" name="remote_url" id="remote_url" value="">
-				<p class="description">This URL provide access to a Git repository via SSH, HTTPS, or Subversion.</p>
+				<input type="text" class="regular-text" name="remote_url" id="remote_url" placeholder="git@github.com:user/example.git" value="">
+				<p class="description">This URL provide access to a Git repository via SSH, HTTPS, or Subversion.<br />
+				If you need to authenticate over "https://" instead of SSH use: <code>https://user:pass@github.com/user/example.git</code></p>
 			</td>
 		</tr>
 
@@ -251,7 +252,7 @@ class Gitium_Admin {
 				<input type="submit" name="SubmitRegenerateKeypair" class="button" value="Regenerate Key" />
 				</p>
 				<p class="description">If your use ssh keybased authentication for git you need to allow write access to your repository using this key.<br>
-				Checkout instructions for <a href="https://help.github.com/articles/generating-ssh-keys#step-3-add-your-ssh-key-to-github" target="_blank">github</a> or <a href="#" target="_blank">bitbucket</a>.
+				Checkout instructions for <a href="https://help.github.com/articles/generating-ssh-keys#step-3-add-your-ssh-key-to-github" target="_blank">github</a> or <a href="https://confluence.atlassian.com/display/BITBUCKET/Add+an+SSH+key+to+an+account#AddanSSHkeytoanaccount-HowtoaddakeyusingSSHforOSXorLinux" target="_blank">bitbucket</a>.
 				</p>
 			</td>
 		</tr>
@@ -298,18 +299,11 @@ class Gitium_Admin {
 		<?php
 	}
 
-	private function changes_page() {
-		$git = $this->git;
-
-		list( $branch_status, $changes ) = _gitium_status();
-		list( $git_public_key, $git_private_key ) = gitium_get_keypair();
-		$branch = $git->get_remote_tracking_branch();
-		$ahead  = count( $git->get_ahead_commits() );
-		$behind = count( $git->get_behind_commits() ); ?>
-
-		<div class="wrap">
-		<div id="icon-options-general" class="icon32">&nbsp;</div>
-		<h2>Status <code class="small">connected to <strong><?php echo esc_html( $git->get_remote_url() ); ?></strong></code></h2>
+	private function show_ahead_and_behind_info( $changes = '' ) {
+		$branch = $this->git->get_remote_tracking_branch();
+		$ahead  = count( $this->git->get_ahead_commits() );
+		$behind = count( $this->git->get_behind_commits() );
+		?>
 		<p>
 		  Following remote branch <code><?php echo esc_html( $branch ); ?></code>.
 		  <?php
@@ -319,7 +313,11 @@ class Gitium_Admin {
 			elseif ( $behind ) echo esc_html( "You are $behind commits behind remote." );
 			?>
 		</p>
-		
+		<?php
+	}
+
+	private function show_git_changes_table( $changes = '' ) {
+		?>
 		<table class="widefat" id="git-changes-table">
 		<thead><tr><th scope="col" class="manage-column">Path</th><th scope="col" class="manage-column">Change</th></tr></thead>
 		<tfoot><tr><th scope="col" class="manage-column">Path</th><th scope="col" class="manage-column">Change</th></tr></tfoot>
@@ -336,17 +334,33 @@ class Gitium_Admin {
 							<?php if ( is_dir( ABSPATH . '/' . $path ) && is_dir( ABSPATH . '/' . trailingslashit( $path ) . '.git' ) ) { // test if is submodule ?>
 								Submodules are not supported in this version.
 							<?php } else { ?>
-								<span title="<?php echo esc_html( $type ); ?>"><?php echo esc_html( $this->humaized_change( $type ) ); ?></span>
+								<span title="<?php echo esc_html( $type ); ?>"><?php echo esc_html( $this->humanized_change( $type ) ); ?></span>
 							<?php } ?>
 						</td>
 					</tr>
 				<?php endforeach; ?>
 			<?php endif; ?>
-		<form action="" method="POST">
-
-		<?php wp_nonce_field( 'gitium-admin' ) ?>
 		</tbody>
 		</table>
+		<?php
+	}
+
+	private function changes_page() {
+		list( $branch_status, $changes ) = _gitium_status();
+		list( $git_public_key, $git_private_key ) = gitium_get_keypair();
+		?>
+		<div class="wrap">
+		<div id="icon-options-general" class="icon32">&nbsp;</div>
+		<h2>Status <code class="small">connected to <strong><?php echo esc_html( $this->git->get_remote_url() ); ?></strong></code></h2>
+
+		<?php
+			$this->show_ahead_and_behind_info( $changes );
+			$this->show_git_changes_table( $changes );
+		?>
+
+		<form action="" method="POST">
+		<?php wp_nonce_field( 'gitium-admin' ) ?>
+
 		<?php if ( ! empty( $changes ) ) : ?>
 			<p>
 			<label for="save-changes">Commit message:</label>
@@ -356,6 +370,7 @@ class Gitium_Admin {
 			<input type="submit" name="SubmitSave" class="button-primary button" value="Save changes" <?php if ( get_transient( 'gitium_remote_disconnected', TRUE ) ) echo 'disabled="disabled" '; ?>/>
 			</p>
 		<?php endif; ?>
+
 		<table class="form-table">
 		  <tr>
 			<th><label for="webhook-url">Webhook URL:</label></th>
@@ -375,13 +390,13 @@ class Gitium_Admin {
 			  <p><input type="text" class="regular-text" name="public_key" id="public-key" value="<?php echo esc_attr( $git_public_key ); ?>" readonly="readonly">
 			  <input type="submit" name="SubmitRegenerateKeypair" class="button" value="Regenerate Key" /></p>
 			  <p class="description">If your use ssh keybased authentication for git you need to allow write access to your repository using this key.<br>
-			  Checkout instructions for <a href="https://help.github.com/articles/generating-ssh-keys#step-3-add-your-ssh-key-to-github" target="_blank">github</a> or <a href="#" target="_blank">bitbucket</a>.
+			  Checkout instructions for <a href="https://help.github.com/articles/generating-ssh-keys#step-3-add-your-ssh-key-to-github" target="_blank">github</a> or <a href="https://confluence.atlassian.com/display/BITBUCKET/Add+an+SSH+key+to+an+account#AddanSSHkeytoanaccount-HowtoaddakeyusingSSHforOSXorLinux" target="_blank">bitbucket</a>.
 			  </p>
 			</td>
 		  </tr>
 		  <?php endif; ?>
-
 		</table>
+
 		</form>
 		</div>
 		<?php
